@@ -16,9 +16,9 @@ def load_data():
 def create_metric_chart(data, chart_type, y=None, column=None, height=150):
     if chart_type == 'bar':
         st.bar_chart(data=data, y=y, height=height)
-    elif type=='bullet':
-        for i in data.column:
-            st.write(i)
+    elif chart_type=='bullet':
+        for i in data:
+            st.markdown(i[0])
    
            
 # display metrics function
@@ -106,52 +106,101 @@ precincts_involved = data['precinct'].nunique()
 
 complaints_graph_data = data[['precinct']].value_counts().index
 
-display_metrics(col=cols[0], 
-                subheader="Total Precincts Involved", 
-                data=complaints_graph_data, 
-                column='precinct',
-                value=precincts_involved)
-
 
 display_metrics(col=cols[1], 
                 subheader="Total Precincts Involved", 
                 data=complaints_graph_data, 
-                y='number_of_complaints', 
+                chart_type="bullet", 
+                column = 0, 
+                y= None, 
                 value=precincts_involved)
+# Display total number of officers involved
+
+
 
 number_of_officers = data['officer_id'].nunique()
-display_metrics(col=cols[2], subheader="Total Officers Involved", data=data, value=number_of_officers,)
+
+complaints_graph_data = data[['date_received', 'officer_id']]
+complaints_graph_data['year'] = complaints_graph_data['date_received'].dt.year
+complaints_graph_data = complaints_graph_data.groupby('year')['officer_id'].nunique()
+complaints_graph_data = complaints_graph_data.rename('number_of_officers')
+
+
+display_metrics(col = cols[2], 
+                subheader = "Total Officers Involved", 
+                data = complaints_graph_data, 
+                chart_type = 'bar', 
+                column = None, 
+                y= number_of_officers, 
+                value=number_of_officers)
 
 # Display total number of complaints with use of force
 row1  = st.columns(3)
-# Display total number of complaints with use of force
+
 use_of_force_complaints = data[data['use_of_force_involved'] == True]['complaint_id'].count()
-display_metrics(col=row1[0], subheader="Total Complaints with Use of Force", data=data, value=use_of_force_complaints)
 
-reslved_complaints = data[data['resolution'] != 'Pending']['complaint_id'].count()
-display_metrics(col=row1[1], subheader="Resolved Complaints", data=data, value=reslved_complaints)
+complaints_graph_data = data[['date_received', 'use_of_force_involved']]
+complaints_graph_data['year'] = complaints_graph_data['date_received'].dt.year
+complaints_graph_data = complaints_graph_data.groupby('year')['use_of_force_involved'].sum()    
 
-unresolved_complaints = data[data['resolution'] == 'Pending']['complaint_id'].count()
-display_metrics(col=row1[2], subheader="Unresolved Complaints", data=data, value=unresolved_complaints,)
+display_metrics(col = row1[0], 
+                subheader = "Total Complaints with Use of Force", 
+                data = complaints_graph_data, 
+                chart_type = 'bar', 
+                column = None, 
+                y= use_of_force_complaints, 
+                value=use_of_force_complaints)
+
+resolved_complaints = data[data['resolution'] != 'Pending']['resolution'].count()
+complaints_graph_data = data[data['resolution'] != 'Pending'][['date_received', 'resolution']]
+complaints_graph_data['year'] = complaints_graph_data['date_received'].dt.year
+complaints_graph_data = complaints_graph_data.groupby('year').count()
+complaints_graph_data = complaints_graph_data.rename(columns={'resolution': 'resolved_complaints'})
+complaints_graph_data = complaints_graph_data['resolved_complaints']
+
+display_metrics(col = row1[1], 
+                subheader = "Resolved Complaints", 
+                data = complaints_graph_data, 
+                chart_type = 'bar', 
+                column = None, 
+                y= resolved_complaints, 
+                value=resolved_complaints)
 
 
-st.title("Breakdown by precinct")
-precincts = data['precinct'].value_counts().keys().sort_values()
-# precinct_count = len(data[data['precinct'] == precincts[0]]['complaint_type'].value_counts())
-complaint_types = data['complaint_type'].value_counts().keys()
+unresolved_complaints = data[data['resolution'] == 'Pending']['resolution'].count()
+complaints_graph_data = data[data['resolution'] == 'Pending'][['date_received', 'resolution']]
+complaints_graph_data['year'] = complaints_graph_data['date_received'].dt.year
+complaints_graph_data = complaints_graph_data.groupby('year').count()
+complaints_graph_data = complaints_graph_data.rename(columns={'resolution': 'unresolved_complaints'})
+complaints_graph_data = complaints_graph_data['unresolved_complaints']
 
 
-for p in precincts:
-    precinct_data = data[data['precinct'] == p]
-    st.subheader(p)
-    cols = st.columns(len(complaint_types))
-    count = 0 
-    for c in complaint_types:
-        if count < len(cols):
-            complaint_type_data = precinct_data[precinct_data['complaint_type'] == c]
-            num = complaint_type_data.shape[0]
-            display_metrics(col = cols[count],subheader = c, data=data, value = num)
-            count += 1    
+display_metrics(col = row1[2], 
+                subheader = "Unresolved Complaints", 
+                data = complaints_graph_data, 
+                chart_type = 'bar', 
+                column = None, 
+                y= unresolved_complaints, 
+                value=unresolved_complaints)
+
+
+# st.title("Breakdown by precinct")
+# precincts = data['precinct'].value_counts().keys().sort_values()
+# # precinct_count = len(data[data['precinct'] == precincts[0]]['complaint_type'].value_counts())
+# complaint_types = data['complaint_type'].value_counts().keys()
+
+
+# for p in precincts:
+#     precinct_data = data[data['precinct'] == p]
+#     st.subheader(p)
+#     cols = st.columns(len(complaint_types))
+#     count = 0 
+#     for c in complaint_types:
+#         if count < len(cols):
+#             complaint_type_data = precinct_data[precinct_data['complaint_type'] == c]
+#             num = complaint_type_data.shape[0]
+#             display_metrics(col = cols[count],subheader = c, data=data, value = num)
+#             count += 1    
 
 with st.expander('See Filtered DataFrame'):
     st.write(data)
